@@ -71,7 +71,7 @@ void handleInput();
 double ticksToMilliseconds(LARGE_INTEGER ticks, LARGE_INTEGER frequency);
 void emulateChip();
 void loadProgramToChip(const char* filename);
-
+void dump_memory(uint16_t start_address, uint16_t length);
 int main(int argc, char **argv) {
     if (!initSDL()) {
         printf("SDL initialization failed!\n");
@@ -79,8 +79,8 @@ int main(int argc, char **argv) {
     }
 
     initChip();
-    loadProgramToChip("pong2.c8");
-
+    loadProgramToChip("test.rom");
+    dump_memory(0x200,47);
      // Query performance frequency (ticks per second)
     QueryPerformanceFrequency(&frequency);
 
@@ -275,6 +275,7 @@ void emulateChip() {
                 break;
             case 0x0: // SYS addr
                 printf("SYS addr executed, ignored for modern emulation.\n");
+                printf("OPCODE: 0x%x", chip.OC);
                 break;
         }
         break;
@@ -549,3 +550,20 @@ void loadProgramToChip(const char* filename) {
     fclose(file); // Close the file after reading
     printf("Program loaded successfully!\n");
 } 
+
+void dump_memory(uint16_t start_address, uint16_t length) {
+    if (start_address >= MEMORY_SIZE) {
+        printf("Error: Start address out of bounds!\n");
+        return;
+    }
+
+    uint16_t end_address = start_address + length;
+    if (end_address > MEMORY_SIZE) {
+        end_address = MEMORY_SIZE; // Prevent overflow
+    }
+
+    printf("Memory Dump: Starting at 0x%03X, Length: %u bytes\n", start_address, length);
+    for (uint16_t i = start_address; i <= end_address; i++) {
+        printf("0x%03X: 0x%02X\n", i, chip.memory[i]);
+    }
+}
