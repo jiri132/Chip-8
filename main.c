@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
     }
 
     initChip();
-    loadProgramToChip("test.rom");
+    loadProgramToChip("program.rom");
     dump_memory(0x200,47);
      // Query performance frequency (ticks per second)
     QueryPerformanceFrequency(&frequency);
@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 
         if (chip.draw_flag) {
             updateDisplay();
-            printf("updated display! at PC: 0x%x", chip.PC);
+            printf("updated display! at PC: 0x%x \n", chip.PC);
             chip.draw_flag = 0;
         }
     }
@@ -256,6 +256,7 @@ void emulateChip() {
     
     unsigned char Vx = (chip.OC & 0x0F00) >> 8;
     unsigned char Vy = (chip.OC & 0x00F0) >> 4;
+    printf("OPCODE: 0x%x", chip.OC);
     // Opcode Decode
     switch (first(chip.OC))
     {    
@@ -275,7 +276,7 @@ void emulateChip() {
                 break;
             case 0x0: // SYS addr
                 printf("SYS addr executed, ignored for modern emulation.\n");
-                printf("OPCODE: 0x%x", chip.OC);
+                printf("OPCODE: 0x%x\n", chip.OC);
                 break;
         }
         break;
@@ -289,6 +290,7 @@ void emulateChip() {
         break;
     case 0x3: // SE Vx , byte 
         if (chip.V[Vx] == kk(chip.OC))  {
+            printf("OPCODE: 0x%x succesfully compared: V:%x and kk:%x\n",chip.OC,chip.V[Vx], kk(chip.OC));
             chip.PC+=2;
         }
         chip.PC+=2;
@@ -464,7 +466,7 @@ void emulateChip() {
                 chip.PC+=2;
                 break;
             case 0x29: // LD F, Vx
-                chip.I = chip.V[Vx] * 0x5;
+                chip.I = chip.V[Vx] * 5;
                 chip.PC+=2;
                 break;
             case 0x33: // LD B, Vx
@@ -496,7 +498,8 @@ void emulateChip() {
          printf("Unknown opcode: 0x%X000\n", first(chip.OC));
         break;
     }
-    printf("Process Counter: %x \n", chip.PC);
+    // printf("Process Counter: %x \n", chip.PC);
+    printf("PC: %04X, I: %04X, V0: %02X, V1: %02X, V2: %02X\n", chip.PC, chip.I, chip.V[0], chip.V[1], chip.V[2]);
 
 
     // Update Timers
@@ -512,43 +515,28 @@ void emulateChip() {
     
 }
 void loadProgramToChip(const char* filename) {
-    FILE *file = fopen(filename, "rb"); // Open the binary file in read-binary mode
-    if (file == NULL) {
-        printf("Error: Could not open program file.\n");
-        return;
+     FILE* file = fopen(filename, "rb"); // Open file in binary mode
+    if (!file) {
+        printf("Failed to open ROM file: %s\n", filename);
+        exit(1);
     }
 
-    // Seek to the end of the file to find the size
+    // Seek to the end of the file to determine its size
     fseek(file, 0, SEEK_END);
-    long bufferSize = ftell(file); // Get the size of the program file
-    rewind(file); // Reset file pointer to the beginning
+    long file_size = ftell(file);
+    rewind(file);
 
-    // Dynamically allocate a buffer based on the file size
-    unsigned char *buffer = (unsigned char *)malloc(bufferSize * sizeof(unsigned char));
-    if (buffer == NULL) {
-        printf("Error: Could not allocate memory for the program.\n");
+    if (file_size > (MEMORY_SIZE - 0x200)) {
+        printf("Error: ROM file too large to fit in memory.\n");
         fclose(file);
-        return;
+        exit(1);
     }
 
-    // Read the file into the buffer
-    size_t bytesRead = fread(buffer, 1, bufferSize, file);
-    if (bytesRead != bufferSize) {
-        printf("Error: Could not read the entire program file.\n");
-        free(buffer); // Free allocated memory
-        fclose(file);
-        return;
-    }
+    // Read the ROM into memory starting at 0x200
+    fread(&chip.memory[0x200], sizeof(uint8_t), file_size, file);
 
-    // Copy the program data into memory starting at 0x200
-    for (int i = 0; i < bufferSize; ++i) {
-        chip.memory[PROGRAM_START + i] = buffer[i];
-    }
-
-    // Free the dynamically allocated buffer and close the file
-    free(buffer);
-    fclose(file); // Close the file after reading
-    printf("Program loaded successfully!\n");
+    printf("Loaded ROM: %s (%ld bytes)\n", filename, file_size);
+    fclose(file);
 } 
 
 void dump_memory(uint16_t start_address, uint16_t length) {
