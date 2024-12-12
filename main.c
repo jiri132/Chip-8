@@ -72,6 +72,7 @@ double ticksToMilliseconds(LARGE_INTEGER ticks, LARGE_INTEGER frequency);
 void emulateChip();
 void loadProgramToChip(const char* filename);
 void dump_memory(uint16_t start_address, uint16_t length);
+
 int main(int argc, char **argv) {
     if (!initSDL()) {
         printf("SDL initialization failed!\n");
@@ -95,27 +96,31 @@ int main(int argc, char **argv) {
         double delta = ticksToMilliseconds(elapsed, frequency);
 
         // Get the current time (in microseconds)
-        QueryPerformanceCounter(&start); // Update start time for the next frame
+        QueryPerformanceCounter(&start) ; // Update start time for the next frame
 
         // Accumulate elapsed time
         ta1 += delta;
         ta2 += delta;
 
-        while (ta2 >= (1000/FRAMERATE)) {
+        if (ta2 >= (1000/FRAMERATE)) {
             handleInput();
-            ta2 -= (1000/FRAMERATE);
-        }
-
-        while (ta1 >= (1000/CHIP_SPEED)) {
-            emulateChip();
-            ta1 -= (1000/CHIP_SPEED);
-        }
-
-        if (chip.draw_flag) {
             updateDisplay();
-            printf("updated display! at PC: 0x%x \n", chip.PC);
-            chip.draw_flag = 0;
+
+            if (chip.draw_flag) {
+                printf("updated display! at PC: 0x%x \n", chip.PC);
+                chip.draw_flag = 0;
+            }
+            // ta2 -= (1000/FRAMERATE);
+            ta2 = 0;
         }
+
+        if (ta1 >= (1000/CHIP_SPEED)) {
+            emulateChip();
+            // ta1 -= (1000/CHIP_SPEED);
+            ta1 = 0;
+        }
+
+
     }
     return 0;
 }
