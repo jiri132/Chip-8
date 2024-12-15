@@ -1,0 +1,3 @@
+CLR
+LDI 0x200
+LD V1 0x300
