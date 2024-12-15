@@ -74,14 +74,20 @@ void loadProgramToChip(const char* filename);
 void dump_memory(uint16_t start_address, uint16_t length);
 
 int main(int argc, char **argv) {
+    if(argc < 2)
+	{
+		printf("Usage: myChip8.exe chip8application\n\n");
+		return 1;
+	}
+
     if (!initSDL()) {
         printf("SDL initialization failed!\n");
         return -1;
     }
 
     initChip();
-    loadProgramToChip("program.rom");
-    dump_memory(0x200,47);
+    loadProgramToChip(argv[1]);
+    // dump_memory(0x200,47);
      // Query performance frequency (ticks per second)
     QueryPerformanceFrequency(&frequency);
 
